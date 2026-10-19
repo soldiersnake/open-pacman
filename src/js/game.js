@@ -94,16 +94,21 @@ function wrapTunnel( a, width ) {
   }
 }
 
+// Distancia positiva hasta el siguiente centro de celda avanzando en el signo
+// dado desde la coordenada a. Toma cualquier velocidad del actor.
+function distToNextCenter( a, sign ) {
+  if ( sign > 0 ) return Math.floor( a + 1e-9 ) + 1 - a;
+  return a - ( Math.ceil( a - 1e-9 ) - 1 );
+}
+
 function movePacman( game ) {
   const p = game.pacman;
   const grid = game.grid;
   const width = grid[ 0 ].length;
 
-  if ( aligned( p.x ) && aligned( p.y ) ) {
-    p.x = Math.round( p.x );
-    p.y = Math.round( p.y );
-
-    // Aplicar giro pendiente si es posible.
+  // Logica al llegar a un centro de celda: giro pendiente, comer y si no
+  // puede seguir, se detiene (devuelve false).
+  const atCenter = () => {
     if ( p.nextDir && canMove( grid, p.x, p.y, p.nextDir, 'pacman' ) ) {
       p.dir = p.nextDir;
       p.nextDir = null;
@@ -127,14 +132,31 @@ function movePacman( game ) {
         g.dir = OPPOSITE[ g.dir ];
       } );
     }
-    // Si no puede seguir, se detiene en la celda.
-    if ( !canMove( grid, p.x, p.y, p.dir, 'pacman' ) ) return;
-  }
+    return canMove( grid, p.x, p.y, p.dir, 'pacman' );
+  };
 
-  const d = DIRS[ p.dir ];
-  p.x += d.x * p.speed;
-  p.y += d.y * p.speed;
-  wrapTunnel( p, width );
+  let dist = p.speed;
+  // Si arranca alineado a un centro, procesar esa celda primero.
+  if ( aligned( p.x ) && aligned( p.y ) ) {
+    p.x = Math.round( p.x );
+    p.y = Math.round( p.y );
+    if ( !atCenter() ) return;
+  }
+  // Avanzar decidiendo en CADA centro cruzado, indep. de caer exacto en
+  // centros: soporta velocidades que no dividen a 1 (ej. FRIGHT_SPEED).
+  while ( dist > 1e-9 ) {
+    const d = DIRS[ p.dir ];
+    const axis = d.x !== 0 ? 'x' : 'y';
+    const sign = d.x !== 0 ? d.x : d.y;
+    const step = Math.min( dist, distToNextCenter( p[ axis ], sign ) );
+    p[ axis ] += sign * step;
+    dist -= step;
+    wrapTunnel( p, width );
+    if ( aligned( p[ axis ] ) && aligned( p[ axis === 'x' ? 'y' : 'x' ] ) ) {
+      p[ axis ] = Math.round( p[ axis ] );
+      if ( !atCenter() ) return;
+    }
+  }
 }
 
 // Celda objetivo segun la personalidad de cada fantasma (clasico arcade).
@@ -256,24 +278,42 @@ function nextStepBFS( grid, x, y, tx, ty, actor ) {
 
 // Fase 'eyes': ojos volviendo a la pen. Autopiloto (BFS) a la puerta y revive.
 function moveGhostEyes( game, g ) {
-  if ( aligned( g.x ) && aligned( g.y ) ) {
-    g.x = Math.round( g.x );
-    g.y = Math.round( g.y );
-    // Dentro de la pen: revivir (saldra de nuevo, asustado si queda reloj).
+  const grid = game.grid;
+  const width = grid[ 0 ].length;
+
+  // Al llegar a un centro: revivir si esta en la pen, o seguir el BFS.
+  const atCenter = () => {
     if ( ( g.x === 13 || g.x === 14 ) && g.y >= 13 && g.y <= 15 ) {
       g.phase = 'pen';
       g.penTimer = 0;
       g.frightened = false;
-      return;
+      return 'revive';
     }
-    const step = nextStepBFS( game.grid, g.x, g.y, 13, 14, 'eyes' );
+    const step = nextStepBFS( grid, g.x, g.y, 13, 14, 'eyes' );
     if ( step ) g.dir = step;
-    if ( !canMove( game.grid, g.x, g.y, g.dir, 'eyes' ) ) return;
+    return canMove( grid, g.x, g.y, g.dir, 'eyes' );
+  };
+
+  let dist = EYES_SPEED;
+  if ( aligned( g.x ) && aligned( g.y ) ) {
+    g.x = Math.round( g.x );
+    g.y = Math.round( g.y );
+    if ( atCenter() !== true ) return;
   }
-  const d = DIRS[ g.dir ];
-  g.x += d.x * EYES_SPEED;
-  g.y += d.y * EYES_SPEED;
-  wrapTunnel( g, game.grid[ 0 ].length );
+  // Avanzar decidiendo en cada centro cruzado (toma cualquier velocidad).
+  while ( dist > 1e-9 ) {
+    const d = DIRS[ g.dir ];
+    const axis = d.x !== 0 ? 'x' : 'y';
+    const sign = d.x !== 0 ? d.x : d.y;
+    const step = Math.min( dist, distToNextCenter( g[ axis ], sign ) );
+    g[ axis ] += sign * step;
+    dist -= step;
+    wrapTunnel( g, width );
+    if ( aligned( g[ axis ] ) && aligned( g[ axis === 'x' ? 'y' : 'x' ] ) ) {
+      g[ axis ] = Math.round( g[ axis ] );
+      if ( atCenter() !== true ) return;
+    }
+  }
 }
 
 function moveGhost( game, g ) {
@@ -291,17 +331,33 @@ function moveGhost( game, g ) {
 
   const speed = g.frightened ? FRIGHT_SPEED : g.speed;
 
+  // Al llegar a un centro: elegir direccion y comprobar que es posible.
+  const atCenter = () => {
+    decideGhost( game, g, 'ghost-out' );
+    return canMove( grid, g.x, g.y, g.dir, 'ghost-out' );
+  };
+
+  let dist = speed;
   if ( aligned( g.x ) && aligned( g.y ) ) {
     g.x = Math.round( g.x );
     g.y = Math.round( g.y );
-    decideGhost( game, g, 'ghost-out' );
-    if ( !canMove( grid, g.x, g.y, g.dir, 'ghost-out' ) ) return;
+    if ( !atCenter() ) return;
   }
-
-  const d = DIRS[ g.dir ];
-  g.x += d.x * speed;
-  g.y += d.y * speed;
-  wrapTunnel( g, width );
+  // Avanzar decidiendo en CADA centro cruzado: soporta velocidades que no
+  // dividen a 1 (ej. FRIGHT_SPEED = 0.07) sin atravesar paredes ni salirse.
+  while ( dist > 1e-9 ) {
+    const d = DIRS[ g.dir ];
+    const axis = d.x !== 0 ? 'x' : 'y';
+    const sign = d.x !== 0 ? d.x : d.y;
+    const step = Math.min( dist, distToNextCenter( g[ axis ], sign ) );
+    g[ axis ] += sign * step;
+    dist -= step;
+    wrapTunnel( g, width );
+    if ( aligned( g[ axis ] ) && aligned( g[ axis === 'x' ? 'y' : 'x' ] ) ) {
+      g[ axis ] = Math.round( g[ axis ] );
+      if ( !atCenter() ) return;
+    }
+  }
 }
 
 function resetPositions( game ) {

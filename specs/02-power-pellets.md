@@ -57,17 +57,17 @@ const EYES_SPEED    = 0.2;
 
 ## Acceptance criteria
 
-- [ ] Se ven 4 power pellets parpadeantes en (1,3), (26,3), (1,23) y (26,23).
-- [ ] Comer un pellet da exactamente 50 puntos y asusta a los fantasmas fuera de la pen.
-- [ ] Los fantasmas asustados dan media vuelta al activarse el modo y aumentan distancia con Pacman.
-- [ ] Los fantasmas asustados son más lentos que Pacman (se les puede alcanzar).
-- [ ] Comer 2 fantasmas con el mismo pellet da 200 y luego 400; con un pellet nuevo la cadena reinicia en 200.
-- [ ] El fantasma comido se ve como ojos, entra por la puerta de la pen y revive saliendo de nuevo.
-- [ ] Un fantasma que sale de la pen con temporizador activo sale asustado.
-- [ ] El temporizador no avanza mientras haya fantasmas en fase `pen`.
-- [ ] Un fantasma normal (no asustado) sigue matando a Pacman como antes.
-- [ ] El nivel se gana solo tras comer todos los dots y los 4 pellets.
-- [ ] Consola sin errores.
+- [ x] Se ven 4 power pellets parpadeantes en (1,3), (26,3), (1,23) y (26,23).
+- [ x] Comer un pellet da exactamente 50 puntos y asusta a los fantasmas fuera de la pen.
+- [ x] Los fantasmas asustados dan media vuelta al activarse el modo y aumentan distancia con Pacman.
+- [ x] Los fantasmas asustados son más lentos que Pacman (se les puede alcanzar).
+- [ x] Comer 2 fantasmas con el mismo pellet da 200 y luego 400; con un pellet nuevo la cadena reinicia en 200.
+- [ x] El fantasma comido se ve como ojos, entra por la puerta de la pen y revive saliendo de nuevo.
+- [ x] Un fantasma que sale de la pen con temporizador activo sale asustado.
+- [ x] El temporizador no avanza mientras haya fantasmas en fase `pen`.
+- [ x] Un fantasma normal (no asustado) sigue matando a Pacman como antes.
+- [ x] El nivel se gana solo tras comer todos los dots y los 4 pellets.
+- [ x] Consola sin errores.
 
 ## Decisions
 
