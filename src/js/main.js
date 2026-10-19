@@ -39,15 +39,29 @@ function startGame() {
 
 if ( actionBtn ) actionBtn.addEventListener( 'click', startGame );
 
-function loop() {
-  frame++;
-  if ( game.state === 'playing' ) {
-    update( game );
-    if ( game.state === 'won' ) showOverlay( 'GANASTE', 'win', 'Reiniciar' );
-    else if ( game.state === 'lost' ) showOverlay( 'PERDISTE', 'lose', 'Reiniciar' );
+// Paso fijo de logica: 60 pasos/s, independientes del refresco del monitor.
+const STEP_MS = 1000 / 60;
+// Tope de acumulacion: evita una avalancha de pasos al volver de otra pestana.
+const MAX_ACCUM_MS = 100;
+
+let lastTime = performance.now();
+let accumulator = 0;
+
+function loop( now ) {
+  accumulator += now - lastTime;
+  lastTime = now;
+  if ( accumulator > MAX_ACCUM_MS ) accumulator = MAX_ACCUM_MS;
+  while ( accumulator >= STEP_MS ) {
+    accumulator -= STEP_MS;
+    frame++;
+    if ( game.state === 'playing' ) {
+      update( game );
+      if ( game.state === 'won' ) showOverlay( 'GANASTE', 'win', 'Reiniciar' );
+      else if ( game.state === 'lost' ) showOverlay( 'PERDISTE', 'lose', 'Reiniciar' );
+    }
   }
   draw( ctx, game, frame );
   requestAnimationFrame( loop );
 }
 
-loop();
+requestAnimationFrame( loop );
